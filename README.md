@@ -110,3 +110,4 @@ After running and reviewing the app yourself:
 - [Gemini pricing and free tier](https://ai.google.dev/gemini-api/docs/pricing)
 - [Gemini embeddings](https://ai.google.dev/gemini-api/docs/embeddings)
 - [LangChain documentation](https://docs.langchain.com/oss/python/langchain/overview)
+# pdf-qa-assistant
