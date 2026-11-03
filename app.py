@@ -11,7 +11,7 @@ from providers import (CHAT_MODEL, EMBEDDING_MODEL, GeminiEmbeddings, INDEX_VERS
 from rag import PDFError, PDFIndex, answer_question, read_pdf, split_pages
 from usage import DAILY_LIMITS, DEMO_MAX_CHUNKS, SESSION_LIMITS, DailyLimit
 
-st.set_page_config(page_title="Pagewise · PDF Assistant", page_icon="📖", layout="wide")
+st.set_page_config(page_title="PageCite · PDF Assistant", page_icon="📖", layout="wide")
 st.markdown("""<style>
 .block-container {max-width: 1100px; padding-top: 2.4rem;}
 [data-testid="stSidebar"] {background-color: #f1f5f3;}
@@ -90,7 +90,7 @@ def render_answer(message):
 
 
 with st.sidebar:
-    st.markdown("### 📖 Pagewise")
+    st.markdown("### 📖 PageCite")
     st.caption("A little clarity for long documents.")
     st.divider()
     st.markdown("**1 · Connect your model**")

@@ -1,6 +1,6 @@
-# Pagewise — Chat with your PDF, with page citations
+# PageCite — Chat with your PDF, with page citations
 
-Upload a PDF, ask a question, and get a short answer **with verified quotes and the page numbers they came from**. If the document doesn't contain the answer, Pagewise says so instead of guessing.
+Upload a PDF, ask a question, and get a short answer **with verified quotes and the page numbers they came from**. If the document doesn't contain the answer, PageCite says so instead of guessing.
 
 **Live demo:** https://chat-from-pdf.streamlit.app/ (no sign-up or API key needed)
 
@@ -156,7 +156,7 @@ The free tier is **not unlimited**. Google limits each project in three ways, se
 
 Limits apply **per project, not per API key**, and differ by model and account. See your exact numbers in [AI Studio → Rate limits](https://aistudio.google.com/rate-limit) and Google's [rate limit docs](https://ai.google.dev/gemini-api/docs/rate-limits).
 
-**What Pagewise uses:**
+**What PageCite uses:**
 
 | Action | Embedding requests | Answer requests |
 |---|---|---|
