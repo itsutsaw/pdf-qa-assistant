@@ -5,7 +5,7 @@ from google.genai import errors, types
 from langchain_core.embeddings import Embeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-CHAT_MODEL = "gemini-2.5-flash-lite"
+CHAT_MODEL = "gemini-3.5-flash-lite"
 EMBEDDING_MODEL = "gemini-embedding-2"
 INDEX_VERSION = f"{EMBEDDING_MODEL}:768:qa-prefix-v1"
 
@@ -47,8 +47,9 @@ class GeminiEmbeddings(Embeddings):
 def make_model(api_key: str, model: str = CHAT_MODEL):
     return ChatGoogleGenerativeAI(
         model=model, google_api_key=api_key, vertexai=False,
-        temperature=1 if model.startswith("gemini-3") else 0,
         timeout=45, max_retries=0, max_output_tokens=4096,
+        # Gemini 3 models use fixed sampling and warn if a temperature is sent.
+        **({} if model.startswith("gemini-3") else {"temperature": 0}),
     )
 
 

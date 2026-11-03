@@ -20,6 +20,16 @@ Open http://localhost:8501. Enter a Gemini API key in the password field in the 
 
 The local virtual environment may already be installed if you are using the workspace where this project was built. In that case, activate it and run Streamlit directly.
 
+## Deploy with a built-in demo key
+
+On Streamlit Community Cloud, open your app → **Settings → Secrets** and add:
+
+```toml
+GEMINI_API_KEY = "your-key"
+```
+
+Visitors can then upload a PDF and ask questions without entering a key. The app uses fixed models (`gemini-3.5-flash-lite` and `gemini-embedding-2`) and protects your free-tier quota with usage limits set in `usage.py`: 3 PDFs and 25 questions per visitor session, and 40 PDFs and 300 questions per day across all visitors. The daily count is kept in memory, so it resets if the app restarts. Visitors can open **Use your own API key instead** to continue past the limits with their own key. Locally, put the key in `.streamlit/secrets.toml` (already ignored by Git) or the `GEMINI_API_KEY` environment variable. Never commit a real key.
+
 ## Get your Gemini key and stay on the free tier
 
 1. Open [Google AI Studio API keys](https://aistudio.google.com/apikey) and sign in with your Google account.

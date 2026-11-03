@@ -14,7 +14,6 @@ import os
 from pathlib import Path
 import re
 import time
-import warnings
 
 from langchain_core.embeddings import Embeddings
 
@@ -159,8 +158,6 @@ def main():
     parser.add_argument("--embedding-model", default=providers.EMBEDDING_MODEL)
     parser.add_argument("--output", help="Results JSON path (default: results/eval-<time>.json).")
     args = parser.parse_args()
-    # Gemini 3 models ignore temperature; LangChain warns on every call.
-    warnings.filterwarnings("ignore", message=".*fixed sampling defaults.*")
 
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:

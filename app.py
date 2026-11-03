@@ -5,9 +5,11 @@ import os
 from pathlib import Path
 
 import streamlit as st
-from providers import GeminiEmbeddings, INDEX_VERSION, error_message, make_model, list_available_models
+from providers import (CHAT_MODEL, EMBEDDING_MODEL, GeminiEmbeddings, INDEX_VERSION, error_message,
+                       make_model, list_available_models)
 
 from rag import PDFError, PDFIndex, answer_question, read_pdf, split_pages
+from usage import DAILY_LIMITS, SESSION_LIMITS, DailyLimit
 
 st.set_page_config(page_title="Pagewise · PDF Assistant", page_icon="📖", layout="wide")
 st.markdown("""<style>
@@ -29,6 +31,42 @@ def show_error(exc):
         st.error(error_message(exc))
 
 
+def demo_api_key() -> str:
+    """The site owner's key from Streamlit secrets or the environment; never shown to visitors."""
+    try:
+        key = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:  # No secrets file exists, e.g. when running locally.
+        key = ""
+    return (key or os.environ.get("GEMINI_API_KEY", "")).strip()
+
+
+@st.cache_resource
+def daily_limit() -> DailyLimit:
+    # cache_resource returns one shared object to every visitor on this server.
+    return DailyLimit(DAILY_LIMITS)
+
+
+def use_demo_quota(kind: str) -> str | None:
+    """Count one use of the demo key; return a message instead if a limit is reached."""
+    used = st.session_state.setdefault("demo_usage", {"pdfs": 0, "questions": 0})
+    if used[kind] >= SESSION_LIMITS[kind]:
+        label = "PDFs" if kind == "pdfs" else "questions"
+        return (f"You've reached this demo's limit of {SESSION_LIMITS[kind]} {label} per visit. "
+                "Add your own Gemini API key in the sidebar to continue.")
+    if not daily_limit().take(kind):
+        return ("The demo has reached today's shared usage limit. Try again tomorrow, "
+                "or add your own Gemini API key in the sidebar.")
+    used[kind] += 1
+    return None
+
+
+def own_key_input() -> str:
+    entered = st.text_input("Gemini API key", type="password", help="Used only in this session.")
+    st.link_button("Get a Gemini API key", "https://aistudio.google.com/apikey")
+    st.caption("For no-charge use, choose a Free tier project in AI Studio and leave paid billing disabled.")
+    return entered.strip()
+
+
 def render_answer(message):
     # Render provider text as plain text to avoid document-supplied remote images/HTML.
     st.text(message["text"])
@@ -47,33 +85,44 @@ with st.sidebar:
     st.caption("A little clarity for long documents.")
     st.divider()
     st.markdown("**1 · Connect your model**")
-    entered_key = st.text_input("Gemini API key", type="password", help="Used only in this session. You can also set GEMINI_API_KEY in your terminal.")
-    api_key = entered_key.strip() or os.environ.get("GEMINI_API_KEY", "").strip()
+    demo_key = demo_api_key()
+    if demo_key:
+        st.caption("Ready to use: this demo includes a Gemini key with shared daily limits. "
+                   "Please don't upload private or confidential documents.")
+        with st.expander("Use your own API key instead"):
+            own_key = own_key_input()
+    else:
+        own_key = own_key_input()
+    using_demo = bool(demo_key) and not own_key
+    api_key = own_key or demo_key
     st.caption("PDF text and questions are sent to Google. Free-tier limits apply; paid projects may incur charges. Free-tier content may be used to improve Google products.")
-    st.link_button("Get a Gemini API key", "https://aistudio.google.com/apikey")
-    st.caption("For no-charge use, choose a Free tier project in AI Studio and leave paid billing disabled.")
     key_id = sha256(api_key.encode()).hexdigest() if api_key else None
     if st.session_state.get("model_key_id") != key_id:
         for name in ("available_models", "chat_model_choice", "embedding_model_choice"):
             st.session_state.pop(name, None)
         st.session_state["model_key_id"] = key_id
         reset_document()
-    if st.button("Load available models", disabled=not api_key):
-        # Clear stale options even when refreshing fails.
-        st.session_state.pop("available_models", None)
-        try:
-            with st.spinner("Checking models listed by Google…"):
-                st.session_state["available_models"] = list_available_models(api_key)
-            for name in ("chat_model_choice", "embedding_model_choice"):
-                st.session_state.pop(name, None)
-        except Exception as exc:
-            show_error(exc)
-    available = st.session_state.get("available_models")
     chat_model = embedding_model = None
-    if available:
-        chat_model = st.selectbox("Answer model", available["chat"], key="chat_model_choice")
-        embedding_model = st.selectbox("Embedding model", available["embedding"], key="embedding_model_choice")
-        st.caption("These models are listed by Google for your key. Check free-tier quota in AI Studio; listing does not verify billing or quota.")
+    if using_demo:
+        # Fixed models avoid a model-list request per visitor.
+        chat_model, embedding_model = CHAT_MODEL, EMBEDDING_MODEL
+    else:
+        if st.button("Load available models", disabled=not api_key):
+            # Clear stale options even when refreshing fails.
+            st.session_state.pop("available_models", None)
+            try:
+                with st.spinner("Checking models listed by Google…"):
+                    st.session_state["available_models"] = list_available_models(api_key)
+                for name in ("chat_model_choice", "embedding_model_choice"):
+                    st.session_state.pop(name, None)
+            except Exception as exc:
+                show_error(exc)
+        available = st.session_state.get("available_models")
+        if available:
+            chat_model = st.selectbox("Answer model", available["chat"], key="chat_model_choice")
+            embedding_model = st.selectbox("Embedding model", available["embedding"], key="embedding_model_choice")
+            st.caption("These models are listed by Google for your key. Check free-tier quota in AI Studio; listing does not verify billing or quota.")
+    can_ask = bool(api_key and chat_model and embedding_model)
     st.divider()
     st.markdown("**2 · Choose a document**")
     sample = st.toggle("Try the sample handbook")
@@ -122,9 +171,12 @@ st.markdown("**Selected document**")
 st.text(filename)
 ready = st.session_state.get("indexed_identity") == identity
 if not ready:
-    if not available:
+    if not can_ask:
         st.info("Enter your Gemini API key, then click Load available models in the sidebar.")
-    if st.button("Prepare PDF", type="primary", disabled=not (api_key and available)):
+    if st.button("Prepare PDF", type="primary", disabled=not can_ask):
+        if using_demo and (limit_message := use_demo_quota("pdfs")):
+            st.warning(limit_message)
+            st.stop()
         try:
             with st.status("Preparing your document…", expanded=True) as status:
                 st.write("Extracting text and preserving page numbers…")
@@ -163,10 +215,15 @@ for message in st.session_state.get("messages", []):
         else:
             st.text(message["text"])
 
-question = st.chat_input("Ask something about this PDF…", disabled=not (api_key and available), max_chars=2000)
+question = st.chat_input("Ask something about this PDF…", disabled=not can_ask, max_chars=2000)
 if not api_key:
     st.info("Add your API key again to ask questions.")
-if question and question.strip():
+limit_message = None
+if question and question.strip() and using_demo:
+    limit_message = use_demo_quota("questions")
+    if limit_message:
+        st.warning(limit_message)
+if question and question.strip() and not limit_message:
     with st.chat_message("user"):
         st.text(question)
     try:
