@@ -1,4 +1,6 @@
 """Gemini Developer API clients; no OpenAI or Vertex AI fallback."""
+import time
+
 import httpx
 from google import genai
 from google.genai import errors, types
@@ -8,6 +10,31 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 CHAT_MODEL = "gemini-3.5-flash-lite"
 EMBEDDING_MODEL = "gemini-embedding-2"
 INDEX_VERSION = f"{EMBEDDING_MODEL}:768:qa-prefix-v1"
+TEMPORARY_ERROR_CODES = {500, 502, 503, 504}
+RETRY_DELAY = 2.0
+
+
+def is_temporary(exc: Exception) -> bool:
+    """True for Google server errors that often succeed on retry (not quota or bad requests)."""
+    current, seen = exc, set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, errors.APIError):
+            return current.code in TEMPORARY_ERROR_CODES
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def retry_once(call):
+    """Run call(), retrying one time after a temporary error. Quota errors (429) are never
+    retried, because a retry would spend more quota and still fail."""
+    try:
+        return call()
+    except Exception as exc:
+        if not is_temporary(exc):
+            raise
+    time.sleep(RETRY_DELAY)
+    return call()
 
 
 class GeminiEmbeddings(Embeddings):
@@ -22,10 +49,10 @@ class GeminiEmbeddings(Embeddings):
         )
 
     def _embed(self, text: str, task_type=None) -> list[float]:
-        result = self.client.models.embed_content(
+        result = retry_once(lambda: self.client.models.embed_content(
             model=self.model, contents=text,
             config=types.EmbedContentConfig(output_dimensionality=768, task_type=task_type),
-        )
+        ))
         if not result.embeddings or len(result.embeddings) != 1 or not result.embeddings[0].values:
             raise ValueError("Gemini returned an empty embedding. Please try again.")
         return list(result.embeddings[0].values)
@@ -44,8 +71,14 @@ class GeminiEmbeddings(Embeddings):
         self.client.close()
 
 
+class RetryingChat(ChatGoogleGenerativeAI):
+    """LangChain's own retries would also retry quota errors, so retry here instead."""
+    def _generate(self, *args, **kwargs):
+        return retry_once(lambda: super(RetryingChat, self)._generate(*args, **kwargs))
+
+
 def make_model(api_key: str, model: str = CHAT_MODEL):
-    return ChatGoogleGenerativeAI(
+    return RetryingChat(
         model=model, google_api_key=api_key, vertexai=False,
         timeout=45, max_retries=0, max_output_tokens=4096,
         # Gemini 3 models use fixed sampling and warn if a temperature is sent.

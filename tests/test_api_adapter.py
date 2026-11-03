@@ -84,3 +84,47 @@ def test_embedding_001_uses_retrieval_task_types_without_prefixes():
         assert embed.call_args_list[0].kwargs["config"].task_type == "RETRIEVAL_DOCUMENT"
         assert embed.call_args_list[1].kwargs["config"].task_type == "RETRIEVAL_QUERY"
     embeddings.close()
+
+
+def chat_response(content):
+    return types.GenerateContentResponse.model_validate({
+        "candidates": [{"content": {"role": "model", "parts": [{"text": json.dumps(content)}]},
+                        "finish_reason": "STOP"}],
+    })
+
+
+def test_chat_retries_once_after_temporary_server_error(monkeypatch):
+    monkeypatch.setattr("providers.RETRY_DELAY", 0)
+    content = {"supported": True, "answer": "20 days of annual leave.",
+               "citations": [{"source_id": 1, "quote": "20 days of annual leave"}]}
+    model = make_model("offline-test-key")
+    overloaded = errors.ServerError(503, {"error": {"message": "overloaded"}})
+    with patch.object(model.client.models, "generate_content",
+                      side_effect=[overloaded, chat_response(content)]) as generate:
+        index, embeddings = fixture_index()
+        assert answer_question("How much leave?", index, embeddings, model).sources[0]["page"] == 1
+        assert generate.call_count == 2
+    model.client.close()
+
+
+@pytest.mark.parametrize("code", [429, 400])
+def test_quota_and_request_errors_are_not_retried(monkeypatch, code):
+    monkeypatch.setattr("providers.RETRY_DELAY", 0)
+    embeddings = GeminiEmbeddings("offline-test-key")
+    error = errors.APIError(code, {"error": {"message": "no"}})
+    with patch.object(embeddings.client.models, "embed_content", side_effect=error) as embed:
+        with pytest.raises(errors.APIError):
+            embeddings.embed_query("A question?")
+        assert embed.call_count == 1
+    embeddings.close()
+
+
+def test_embedding_gives_up_after_one_retry(monkeypatch):
+    monkeypatch.setattr("providers.RETRY_DELAY", 0)
+    embeddings = GeminiEmbeddings("offline-test-key")
+    error = errors.ServerError(503, {"error": {"message": "overloaded"}})
+    with patch.object(embeddings.client.models, "embed_content", side_effect=error) as embed:
+        with pytest.raises(errors.ServerError):
+            embeddings.embed_query("A question?")
+        assert embed.call_count == 2
+    embeddings.close()
