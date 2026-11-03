@@ -1,4 +1,6 @@
 """Gemini Developer API clients; no OpenAI or Vertex AI fallback."""
+import json
+import re
 import time
 
 import httpx
@@ -12,35 +14,71 @@ EMBEDDING_MODEL = "gemini-embedding-2"
 INDEX_VERSION = f"{EMBEDDING_MODEL}:768:qa-prefix-v1"
 TEMPORARY_ERROR_CODES = {500, 502, 503, 504}
 RETRY_DELAY = 2.0
+RATE_LIMIT_WAIT = 60.0  # Used when Google does not say how long to wait.
+MAX_RATE_LIMIT_WAITS = 2
 
 
-def is_temporary(exc: Exception) -> bool:
-    """True for Google server errors that often succeed on retry (not quota or bad requests)."""
+def api_error(exc: Exception) -> errors.APIError | None:
+    """Find Google's error inside wrapper exceptions (LangChain wraps it)."""
     current, seen = exc, set()
     while current is not None and id(current) not in seen:
         seen.add(id(current))
         if isinstance(current, errors.APIError):
-            return current.code in TEMPORARY_ERROR_CODES
+            return current
         current = current.__cause__ or current.__context__
-    return False
+    return None
 
 
-def retry_once(call):
-    """Run call(), retrying one time after a temporary error. Quota errors (429) are never
-    retried, because a retry would spend more quota and still fail."""
-    try:
-        return call()
-    except Exception as exc:
-        if not is_temporary(exc):
-            raise
-    time.sleep(RETRY_DELAY)
-    return call()
+def is_temporary(exc: Exception) -> bool:
+    """True for Google server errors that often succeed on retry (not quota or bad requests)."""
+    error = api_error(exc)
+    return error is not None and error.code in TEMPORARY_ERROR_CODES
+
+
+def per_minute_wait(exc: Exception) -> float | None:
+    """Seconds to wait if a per-minute limit was hit (it refills within a minute).
+    None for daily quota, which waiting cannot fix, and for every other error."""
+    error = api_error(exc)
+    if error is None or error.code != 429:
+        return None
+    details = json.dumps(error.details, default=str)
+    if "PerDay" in details or "PerMinute" not in details:
+        return None
+    delay = re.search(r'"retryDelay": "(\d+(?:\.\d+)?)s"', details)
+    return min(float(delay.group(1)) + 1, 65.0) if delay else RATE_LIMIT_WAIT
+
+
+def call_gemini(call, on_wait=None):
+    """Run call(), recovering from errors that waiting can fix:
+    - per-minute rate limit (429): wait for the quota to refill, at most twice;
+    - temporary server error (5xx): retry once after 2 seconds.
+    Daily quota and bad-request errors are raised at once; retrying would only spend quota."""
+    rate_waits = server_retries = 0
+    while True:
+        try:
+            return call()
+        except Exception as exc:
+            wait = per_minute_wait(exc)
+            if wait is not None and rate_waits < MAX_RATE_LIMIT_WAITS:
+                rate_waits += 1
+            elif is_temporary(exc) and server_retries < 1:
+                server_retries += 1
+                wait = RETRY_DELAY
+            else:
+                raise
+        if on_wait:
+            on_wait(wait)
+        time.sleep(wait)
 
 
 class GeminiEmbeddings(Embeddings):
-    """One vector per passage (Embedding 2 aggregates multiple inputs)."""
-    def __init__(self, api_key: str, client=None, model: str = EMBEDDING_MODEL):
+    """One vector per passage (Embedding 2 aggregates multiple inputs).
+    on_progress(done, total) and on_wait(seconds) let the UI show what is happening."""
+    def __init__(self, api_key: str, client=None, model: str = EMBEDDING_MODEL,
+                 on_progress=None, on_wait=None):
         self.model = model
+        self.on_progress = on_progress
+        self.on_wait = on_wait
         self.client = client or genai.Client(
             api_key=api_key, vertexai=False,
             http_options=types.HttpOptions(
@@ -49,18 +87,24 @@ class GeminiEmbeddings(Embeddings):
         )
 
     def _embed(self, text: str, task_type=None) -> list[float]:
-        result = retry_once(lambda: self.client.models.embed_content(
+        result = call_gemini(lambda: self.client.models.embed_content(
             model=self.model, contents=text,
             config=types.EmbedContentConfig(output_dimensionality=768, task_type=task_type),
-        ))
+        ), self.on_wait)
         if not result.embeddings or len(result.embeddings) != 1 or not result.embeddings[0].values:
             raise ValueError("Gemini returned an empty embedding. Please try again.")
         return list(result.embeddings[0].values)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        if self.model == "gemini-embedding-001":
-            return [self._embed(text, "RETRIEVAL_DOCUMENT") for text in texts]
-        return [self._embed(f"title: none | text: {text}") for text in texts]
+        vectors = []
+        for number, text in enumerate(texts, start=1):
+            if self.model == "gemini-embedding-001":
+                vectors.append(self._embed(text, "RETRIEVAL_DOCUMENT"))
+            else:
+                vectors.append(self._embed(f"title: none | text: {text}"))
+            if self.on_progress:
+                self.on_progress(number, len(texts))
+        return vectors
 
     def embed_query(self, text: str) -> list[float]:
         if self.model == "gemini-embedding-001":
@@ -72,9 +116,9 @@ class GeminiEmbeddings(Embeddings):
 
 
 class RetryingChat(ChatGoogleGenerativeAI):
-    """LangChain's own retries would also retry quota errors, so retry here instead."""
+    """LangChain's own retries would also retry daily quota errors, so retry here instead."""
     def _generate(self, *args, **kwargs):
-        return retry_once(lambda: super(RetryingChat, self)._generate(*args, **kwargs))
+        return call_gemini(lambda: super(RetryingChat, self)._generate(*args, **kwargs))
 
 
 def make_model(api_key: str, model: str = CHAT_MODEL):

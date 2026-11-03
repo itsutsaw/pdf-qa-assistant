@@ -99,3 +99,16 @@ def test_visitor_key_replaces_demo_key(monkeypatch):
     app.text_input[0].set_value("my-own-key").run()
     assert not app.exception
     assert any(b.label == "Load available models" for b in app.button)
+
+
+def test_demo_rejects_pdf_over_passage_cap_before_any_api_call(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setattr("usage.DEMO_MAX_CHUNKS", 2)  # The sample handbook has 3 passages.
+    with patch("providers.GeminiEmbeddings") as embeddings:
+        app = demo_app()
+        app.toggle[0].set_value(True).run()
+        next(b for b in app.button if b.label == "Prepare PDF").click().run()
+        assert not app.exception
+        assert "3 passages" in app.error[0].value
+        embeddings.assert_not_called()
+        assert "demo_usage" not in app.session_state  # No quota was used.

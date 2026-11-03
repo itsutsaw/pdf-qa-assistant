@@ -128,3 +128,54 @@ def test_embedding_gives_up_after_one_retry(monkeypatch):
             embeddings.embed_query("A question?")
         assert embed.call_count == 2
     embeddings.close()
+
+
+def quota_error(quota_id, retry_delay="3s"):
+    """Shaped like Google's 429 body: which quota was exceeded, and when to retry."""
+    return errors.ClientError(429, {"error": {
+        "code": 429, "message": "Quota exceeded", "status": "RESOURCE_EXHAUSTED",
+        "details": [
+            {"@type": "type.googleapis.com/google.rpc.QuotaFailure", "violations": [{"quotaId": quota_id}]},
+            {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": retry_delay},
+        ]}})
+
+
+PER_MINUTE = "EmbedContentRequestsPerMinutePerProjectPerModel-FreeTier"
+PER_DAY = "EmbedContentRequestsPerDayPerProjectPerModel-FreeTier"
+VECTOR = types.EmbedContentResponse(embeddings=[types.ContentEmbedding(values=[1.0, 0.0])])
+
+
+def test_per_minute_limit_waits_then_resumes_with_progress(monkeypatch):
+    sleeps, waits, progress = [], [], []
+    monkeypatch.setattr("providers.time.sleep", sleeps.append)
+    embeddings = GeminiEmbeddings("offline-test-key", on_wait=waits.append,
+                                  on_progress=lambda done, total: progress.append((done, total)))
+    with patch.object(embeddings.client.models, "embed_content",
+                      side_effect=[VECTOR, quota_error(PER_MINUTE), VECTOR]) as embed:
+        assert len(embeddings.embed_documents(["First.", "Second."])) == 2
+        assert embed.call_count == 3
+    assert sleeps == waits == [4.0]  # Google's retryDelay plus one second.
+    assert progress == [(1, 2), (2, 2)]
+    embeddings.close()
+
+
+def test_daily_quota_is_never_waited_for(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("providers.time.sleep", sleeps.append)
+    embeddings = GeminiEmbeddings("offline-test-key")
+    with patch.object(embeddings.client.models, "embed_content", side_effect=quota_error(PER_DAY)) as embed:
+        with pytest.raises(errors.ClientError):
+            embeddings.embed_query("A question?")
+        assert embed.call_count == 1
+    assert sleeps == []
+    embeddings.close()
+
+
+def test_per_minute_limit_gives_up_after_two_waits(monkeypatch):
+    monkeypatch.setattr("providers.time.sleep", lambda seconds: None)
+    embeddings = GeminiEmbeddings("offline-test-key")
+    with patch.object(embeddings.client.models, "embed_content", side_effect=quota_error(PER_MINUTE)) as embed:
+        with pytest.raises(errors.ClientError):
+            embeddings.embed_query("A question?")
+        assert embed.call_count == 3
+    embeddings.close()

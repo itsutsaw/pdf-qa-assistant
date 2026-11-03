@@ -9,7 +9,7 @@ from providers import (CHAT_MODEL, EMBEDDING_MODEL, GeminiEmbeddings, INDEX_VERS
                        make_model, list_available_models)
 
 from rag import PDFError, PDFIndex, answer_question, read_pdf, split_pages
-from usage import DAILY_LIMITS, SESSION_LIMITS, DailyLimit
+from usage import DAILY_LIMITS, DEMO_MAX_CHUNKS, SESSION_LIMITS, DailyLimit
 
 st.set_page_config(page_title="Pagewise · PDF Assistant", page_icon="📖", layout="wide")
 st.markdown("""<style>
@@ -58,6 +58,15 @@ def use_demo_quota(kind: str) -> str | None:
                 "or add your own Gemini API key in the sidebar.")
     used[kind] += 1
     return None
+
+
+def check_demo_pdf(passages: int):
+    """Raise PDFError if the demo key should not embed this PDF. Each passage is one API request."""
+    if passages > DEMO_MAX_CHUNKS:
+        raise PDFError(f"This PDF has {passages} passages; the demo allows up to {DEMO_MAX_CHUNKS} "
+                       "(about 40–60 pages of notes). Use a shorter PDF, or add your own Gemini API key.")
+    if limit_message := use_demo_quota("pdfs"):
+        raise PDFError(limit_message)
 
 
 def own_key_input() -> str:
@@ -174,16 +183,27 @@ if not ready:
     if not can_ask:
         st.info("Enter your Gemini API key, then click Load available models in the sidebar.")
     if st.button("Prepare PDF", type="primary", disabled=not can_ask):
-        if using_demo and (limit_message := use_demo_quota("pdfs")):
-            st.warning(limit_message)
-            st.stop()
         try:
             with st.status("Preparing your document…", expanded=True) as status:
                 st.write("Extracting text and preserving page numbers…")
                 parsed = read_pdf(data, filename)
                 chunks = split_pages(parsed.pages)
+                if using_demo:
+                    check_demo_pdf(len(chunks))
                 st.write(f"Creating a searchable index of {len(chunks)} passages…")
-                embeddings = GeminiEmbeddings(api_key, model=embedding_model)
+                progress = st.progress(0.0)
+                note = st.empty()
+
+                def show_progress(done, total):
+                    note.empty()
+                    progress.progress(done / total, text=f"Embedding passages {done}/{total}…")
+
+                def show_wait(seconds):
+                    note.info(f"Gemini's per-minute limit was reached. Waiting {seconds:.0f} seconds, "
+                              "then continuing where it stopped…")
+
+                embeddings = GeminiEmbeddings(api_key, model=embedding_model,
+                                              on_progress=show_progress, on_wait=show_wait)
                 try:
                     index = PDFIndex.build(chunks, embeddings)
                 finally:
@@ -192,7 +212,8 @@ if not ready:
                 status.update(label="Ready to answer questions", state="complete", expanded=False)
             st.rerun()
         except Exception as exc:
-            st.error(f"PDF preparation failed using {embedding_model}.")
+            if not isinstance(exc, PDFError):
+                st.error(f"PDF preparation failed using {embedding_model}.")
             show_error(exc)
     st.stop()
 

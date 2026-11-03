@@ -4,6 +4,8 @@ from threading import Lock
 
 SESSION_LIMITS = {"pdfs": 3, "questions": 25}
 DAILY_LIMITS = {"pdfs": 40, "questions": 300}
+# Each passage costs one embedding request, so cap PDF size on the shared key.
+DEMO_MAX_CHUNKS = 150
 
 
 class DailyLimit:

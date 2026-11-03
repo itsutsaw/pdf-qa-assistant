@@ -28,7 +28,7 @@ On Streamlit Community Cloud, open your app → **Settings → Secrets** and add
 GEMINI_API_KEY = "your-key"
 ```
 
-Visitors can then upload a PDF and ask questions without entering a key. The app uses fixed models (`gemini-3.5-flash-lite` and `gemini-embedding-2`) and protects your free-tier quota with usage limits set in `usage.py`: 3 PDFs and 25 questions per visitor session, and 40 PDFs and 300 questions per day across all visitors. The daily count is kept in memory, so it resets if the app restarts. Visitors can open **Use your own API key instead** to continue past the limits with their own key. Locally, put the key in `.streamlit/secrets.toml` (already ignored by Git) or the `GEMINI_API_KEY` environment variable. Never commit a real key.
+Visitors can then upload a PDF and ask questions without entering a key. The app uses fixed models (`gemini-3.5-flash-lite` and `gemini-embedding-2`) and protects your free-tier quota with usage limits set in `usage.py`: 3 PDFs and 25 questions per visitor session, and 40 PDFs and 300 questions per day across all visitors. PDFs over 150 passages (about 40–60 pages) need the visitor's own key, because each passage is one embedding request. If Gemini's per-minute limit is hit while preparing, the app waits for it to refill and continues; a daily quota error stops at once. The daily count is kept in memory, so it resets if the app restarts. Visitors can open **Use your own API key instead** to continue past the limits with their own key. Locally, put the key in `.streamlit/secrets.toml` (already ignored by Git) or the `GEMINI_API_KEY` environment variable. Never commit a real key.
 
 ## Get your Gemini key and stay on the free tier
 
