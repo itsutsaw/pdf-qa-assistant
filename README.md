@@ -53,7 +53,7 @@ Upload a PDF, ask a question, and get a short answer **with verified quotes and 
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TD
     A[PDF] --> B[Extract text per page<br/>pypdf]
     B --> C[Split into passages<br/>1,000 chars, 150 overlap]
     C --> D[Embed each passage<br/>gemini-embedding-2]
