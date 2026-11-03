@@ -1,10 +1,10 @@
 [
-  {"question": "How many days of paid annual leave do employees receive?", "expected_answer": "20 days per calendar year", "expected_pages": [1]},
-  {"question": "How far in advance should planned leave be requested?", "expected_answer": "At least five working days", "expected_pages": [1]},
-  {"question": "How do I report a lost laptop?", "expected_answer": "Contact the IT help desk immediately", "expected_pages": [2]},
-  {"question": "May I share my account password with a coworker?", "expected_answer": "No, passwords must never be shared", "expected_pages": [2]},
-  {"question": "What is the meal reimbursement limit?", "expected_answer": "INR 500 per day during approved business travel", "expected_pages": [3]},
-  {"question": "When should travel expense claims be submitted?", "expected_answer": "Within 14 days of returning", "expected_pages": [3]},
-  {"question": "Who won the football World Cup?", "expected_answer": "Not found in the document.", "expected_pages": []},
-  {"question": "What is the CEO's salary?", "expected_answer": "Not found in the document.", "expected_pages": []}
+  {"category": "factual", "question": "How many days of paid annual leave do employees receive?", "expected_answer": "20 days per calendar year", "expected_pages": [1], "must_contain": ["20"], "evidence": ["20 days of paid annual leave"]},
+  {"category": "factual", "question": "How far in advance should planned leave be requested?", "expected_answer": "At least five working days", "expected_pages": [1], "must_contain": [["five", "5"]], "evidence": ["at least five working days in advance"]},
+  {"category": "factual", "question": "How do I report a lost laptop?", "expected_answer": "Contact the IT help desk immediately", "expected_pages": [2], "must_contain": [["help desk", "helpdesk"]], "evidence": ["Report a lost laptop to the IT help desk immediately"]},
+  {"category": "factual", "question": "May I share my account password with a coworker?", "expected_answer": "No, passwords must never be shared", "expected_pages": [2], "must_contain": [["no", "never", "not"]], "evidence": ["Passwords must never be shared with anyone"]},
+  {"category": "factual", "question": "What is the meal reimbursement limit?", "expected_answer": "INR 500 per day during approved business travel", "expected_pages": [3], "must_contain": ["500"], "evidence": ["reimbursed up to INR 500 per day"]},
+  {"category": "factual", "question": "When should travel expense claims be submitted?", "expected_answer": "Within 14 days of returning", "expected_pages": [3], "must_contain": ["14"], "evidence": ["within 14 days of returning"]},
+  {"category": "unanswerable", "question": "Who won the football World Cup?", "expected_answer": "Not found in the document.", "expected_pages": [], "must_contain": [], "evidence": []},
+  {"category": "unanswerable", "question": "What is the CEO's salary?", "expected_answer": "Not found in the document.", "expected_pages": [], "must_contain": [], "evidence": []}
 ]

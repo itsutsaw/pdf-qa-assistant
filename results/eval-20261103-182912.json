@@ -1,0 +1,610 @@
+{
+  "config": {
+    "pdf": "examples/eval_handbook.pdf",
+    "questions": "examples/eval_handbook_questions.json",
+    "k": 4,
+    "chat_model": "gemini-3.5-flash-lite",
+    "embedding_model": "gemini-embedding-2",
+    "date": "2026-11-03T18:29:12.277701"
+  },
+  "summary": {
+    "questions": 27,
+    "hit_at_1": 0.909,
+    "hit_at_k": 0.955,
+    "mrr": 0.932,
+    "answer_accuracy": 0.963,
+    "citation_page_accuracy": 1.0,
+    "false_refusal_rate": 0.045,
+    "hallucination_rate": 0.0
+  },
+  "results": [
+    {
+      "category": "factual",
+      "question": "How many days of paid annual leave do employees receive?",
+      "expected_pages": [
+        3
+      ],
+      "retrieved_pages": [
+        3,
+        3,
+        4,
+        1
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Employees receive 24 days of paid annual leave each leave year, with new joiners receiving a pro-rated allowance for their first year.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        3
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "What is the hotel limit per night in metro cities?",
+      "expected_pages": [
+        6
+      ],
+      "retrieved_pages": [
+        6,
+        7,
+        10,
+        5
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Hotel stays in metro cities are capped at INR 6,000 per night including taxes.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        6
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "How long is the notice period?",
+      "expected_pages": [
+        13
+      ],
+      "retrieved_pages": [
+        13,
+        3,
+        2,
+        5
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "The notice period is 60 days for both the employee and the company, unless stated otherwise in your contract.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        13
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "How often are laptops refreshed?",
+      "expected_pages": [
+        8
+      ],
+      "retrieved_pages": [
+        8,
+        8,
+        10,
+        5
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Laptops are refreshed every 36 months, or sooner if a device fails and cannot be repaired.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        8
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "When are salaries paid?",
+      "expected_pages": [
+        11
+      ],
+      "retrieved_pages": [
+        11,
+        2,
+        2,
+        3
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Salaries are paid on the last working day of each month by bank transfer.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        11
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "How many free counselling sessions does the employee assistance programme offer?",
+      "expected_pages": [
+        12
+      ],
+      "retrieved_pages": [
+        12,
+        10,
+        3,
+        4
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "The employee assistance programme offers 6 free confidential counselling sessions per year.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        12
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "factual",
+      "question": "What are the core working hours?",
+      "expected_pages": [
+        2
+      ],
+      "retrieved_pages": [
+        2,
+        2,
+        1,
+        5
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Core working hours are from 10:00 AM to 4:00 PM, Monday to Friday.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        2
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "I was off ill from Monday to Thursday. Do I need a note from a doctor?",
+      "expected_pages": [
+        4
+      ],
+      "retrieved_pages": [
+        4,
+        4,
+        2,
+        3
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Yes, a medical certificate is required if you take sick leave for more than three consecutive days, such as from Monday to Thursday.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        4
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "Can I spend a few weeks working from my parents' home in another country?",
+      "expected_pages": [
+        5
+      ],
+      "retrieved_pages": [
+        5,
+        5,
+        1,
+        4
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Yes, you can work from another country for a maximum of 30 days in any 12-month period, provided you first complete security review SEC-09 with the Security Office.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        5
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "How much will the company give me to set up a desk at home?",
+      "expected_pages": [
+        5
+      ],
+      "retrieved_pages": [
+        5,
+        5,
+        10,
+        8
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "The company provides a one-time home office stipend of INR 15,000 to help set up a safe workspace, which you can claim within your first three months using the normal expense process.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        5
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "If the company pays for an expensive course and I quit soon after, do I have to pay anything back?",
+      "expected_pages": [
+        10
+      ],
+      "retrieved_pages": [
+        10,
+        13,
+        3,
+        10
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Yes. If the company pays more than INR 100,000 for a single course and you resign within 12 months of completing it, you must repay a share of the cost in proportion to the months remaining.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        10
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "Where do we meet outside if we have to evacuate the building?",
+      "expected_pages": [
+        12
+      ],
+      "retrieved_pages": [
+        12,
+        1,
+        2,
+        5
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "If you have to evacuate the building, gather at the assembly point in car park B.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        12
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "What happens to holiday days I don't use by the end of the year?",
+      "expected_pages": [
+        3
+      ],
+      "retrieved_pages": [
+        3,
+        3,
+        1,
+        10
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "You can carry over up to 5 unused annual leave days into the next leave year, but these must be used by 31 March or they expire. Unused leave is not paid out unless you leave the company.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        3
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "paraphrase",
+      "question": "How long can a new parent who is the main carer take off?",
+      "expected_pages": [
+        4
+      ],
+      "retrieved_pages": [
+        4,
+        4,
+        3,
+        1
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Primary caregivers, who are the primary parents or main carers, receive 26 weeks of paid parental leave.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        4
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "exact_term",
+      "question": "What is form HR-17 used for?",
+      "expected_pages": [
+        3
+      ],
+      "retrieved_pages": [
+        3,
+        1,
+        12,
+        2
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Form HR-17 is used to request annual leave.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        3
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "exact_term",
+      "question": "What is HS-1 used for?",
+      "expected_pages": [
+        12
+      ],
+      "retrieved_pages": [
+        12,
+        1,
+        5,
+        6
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Form HS-1 is used to report any accident, injury, or near miss within 24 hours, even if nobody was hurt.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        12
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "exact_term",
+      "question": "What is SEC-09?",
+      "expected_pages": [
+        5
+      ],
+      "retrieved_pages": [
+        9,
+        9,
+        13,
+        1
+      ],
+      "hit_at_1": false,
+      "hit_at_k": false,
+      "reciprocal_rank": 0.0,
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": false,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    },
+    {
+      "category": "exact_term",
+      "question": "What is the deadline for EXP-4?",
+      "expected_pages": [
+        7
+      ],
+      "retrieved_pages": [
+        7,
+        1,
+        6,
+        10
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Expense claims with form EXP-4 must be submitted within 30 days of the date the cost was incurred. Claims submitted later than 30 days require written approval from the Finance team.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        7
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "exact_term",
+      "question": "What is extension 4357 for?",
+      "expected_pages": [
+        8
+      ],
+      "retrieved_pages": [
+        1,
+        8,
+        12,
+        12
+      ],
+      "hit_at_1": false,
+      "hit_at_k": true,
+      "reciprocal_rank": 0.5,
+      "answer": "Extension 4357 is called to report a lost or stolen laptop, phone, or security key to the IT service desk.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        8
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "exact_term",
+      "question": "When is HR-12 due?",
+      "expected_pages": [
+        2
+      ],
+      "retrieved_pages": [
+        2,
+        3,
+        1,
+        12
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Form HR-12 is due by 12:00 noon every Monday for the previous week.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        2
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "multi_page",
+      "question": "Which forms do I need to attend an external conference that requires travel?",
+      "expected_pages": [
+        6,
+        10
+      ],
+      "retrieved_pages": [
+        6,
+        10,
+        1,
+        7
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "To attend an external conference that requires travel, you need to submit form LD-3 and a separate travel request (form TRV-2).",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        6,
+        10
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "multi_page",
+      "question": "What are the deadlines for submitting timesheets and expense claims?",
+      "expected_pages": [
+        2,
+        7
+      ],
+      "retrieved_pages": [
+        7,
+        2,
+        1,
+        11
+      ],
+      "hit_at_1": true,
+      "hit_at_k": true,
+      "reciprocal_rank": 1.0,
+      "answer": "Timesheets must be submitted by 12:00 noon every Monday for the previous week using form HR-12. Expense claims must be submitted within 30 days of the date the cost was incurred using form EXP-4, and claims submitted later than 30 days require written approval from the Finance team.",
+      "refused": false,
+      "answer_correct": true,
+      "cited_pages": [
+        2,
+        7
+      ],
+      "citation_pages_correct": true
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the reimbursement limit for taxi rides?",
+      "expected_pages": [],
+      "retrieved_pages": [
+        7,
+        6,
+        10,
+        5
+      ],
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": true,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    },
+    {
+      "category": "unanswerable",
+      "question": "What is the CEO's salary?",
+      "expected_pages": [],
+      "retrieved_pages": [
+        11,
+        2,
+        4,
+        13
+      ],
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": true,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    },
+    {
+      "category": "unanswerable",
+      "question": "Does the company provide dental insurance?",
+      "expected_pages": [],
+      "retrieved_pages": [
+        1,
+        4,
+        11,
+        10
+      ],
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": true,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    },
+    {
+      "category": "unanswerable",
+      "question": "Can I bring my dog to the office?",
+      "expected_pages": [],
+      "retrieved_pages": [
+        1,
+        5,
+        5,
+        8
+      ],
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": true,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    },
+    {
+      "category": "unanswerable",
+      "question": "Who won the football World Cup?",
+      "expected_pages": [],
+      "retrieved_pages": [
+        1,
+        9,
+        6,
+        2
+      ],
+      "answer": "Not found in the document.",
+      "refused": true,
+      "answer_correct": true,
+      "cited_pages": [],
+      "citation_pages_correct": null
+    }
+  ]
+}
