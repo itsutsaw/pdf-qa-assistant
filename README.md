@@ -1,123 +1,250 @@
-# Pagewise — PDF Question-Answering Assistant
+# Pagewise — Chat with your PDF, with page citations
 
-A small resume project: upload a PDF, ask a question, and read an answer with verified source quotations and page references.
+Upload a PDF, ask a question, and get a short answer **with verified quotes and the page numbers they came from**. If the document doesn't contain the answer, Pagewise says so instead of guessing.
 
-**Stack:** Python, Streamlit, LangChain, FAISS, pypdf, and the Gemini Developer API.
+**Live demo:** https://chat-from-pdf.streamlit.app/ (no sign-up or API key needed)
 
-## Run locally
+**Stack:** Python · Streamlit · LangChain · FAISS · pypdf · Google Gemini API
 
-Use Python 3.11 or later (this project was tested with Python 3.14).
+---
 
-```bash
-cd /home/utsaw/Desktop/Machine_Learning/ML_Challenge/pdf_qa_assistant
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m streamlit run app.py --server.address 127.0.0.1
-```
+## Contents
 
-Open http://localhost:8501. Enter a Gemini API key in the password field in the sidebar, click **Load available models**, choose the listed answer and embedding models, then choose a PDF or the sample handbook and click **Prepare PDF**. Then ask a complete question. You can instead provide your key through the `GEMINI_API_KEY` environment variable. Do not put a real key in source files or commit one to Git.
+- [Features](#features)
+- [Try the live demo](#try-the-live-demo)
+- [How it works](#how-it-works)
+- [Measured results](#measured-results)
+- [Run it on your computer](#run-it-on-your-computer)
+- [Deploy your own copy](#deploy-your-own-copy)
+- [Gemini API limits (free tier)](#gemini-api-limits-free-tier)
+- [Run the tests](#run-the-tests)
+- [Run the evaluation](#run-the-evaluation)
+- [Project structure](#project-structure)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
 
-The local virtual environment may already be installed if you are using the workspace where this project was built. In that case, activate it and run Streamlit directly.
+---
 
-## Deploy with a built-in demo key
+## Features
 
-On Streamlit Community Cloud, open your app → **Settings → Secrets** and add:
+- **Answers with proof** — every answer shows the source page and the exact quote it is based on.
+- **Refuses instead of guessing** — answers whose quotes can't be found word-for-word in the PDF are rejected and shown as "Not found in the document."
+- **Page-accurate citations** — text is split per page, so every passage maps to exactly one page.
+- **Works without a key** — the hosted demo uses a built-in key with fair-use limits; visitors can add their own key to go past them.
+- **Handles API limits gracefully** — waits and continues when Gemini's per-minute limit is hit, and retries temporary server errors once.
+- **Measured, not guessed** — an evaluation script reports retrieval and answer accuracy on a labelled question set.
+- **Offline test suite** — 52 tests that need no API key.
 
-```toml
-GEMINI_API_KEY = "your-key"
-```
+## Try the live demo
 
-Visitors can then upload a PDF and ask questions without entering a key. The app uses fixed models (`gemini-3.5-flash-lite` and `gemini-embedding-2`) and protects your free-tier quota with usage limits set in `usage.py`: 3 PDFs and 25 questions per visitor session, and 40 PDFs and 300 questions per day across all visitors. PDFs over 150 passages (about 40–60 pages) need the visitor's own key, because each passage is one embedding request. If Gemini's per-minute limit is hit while preparing, the app waits for it to refill and continues; a daily quota error stops at once. The daily count is kept in memory, so it resets if the app restarts. Visitors can open **Use your own API key instead** to continue past the limits with their own key. Locally, put the key in `.streamlit/secrets.toml` (already ignored by Git) or the `GEMINI_API_KEY` environment variable. Never commit a real key.
+1. Open https://chat-from-pdf.streamlit.app/
+2. In the sidebar, switch on **Try the sample handbook** (or upload your own PDF).
+3. Click **Prepare PDF**.
+4. Ask a question, for example:
+   - "How many days of paid annual leave do employees receive?" → 20 days (page 1)
+   - "How do I report a lost laptop?" → contact the IT help desk immediately (page 2)
+   - "Who won the football World Cup?" → Not found in the document.
+5. Open **Source** under an answer to see the quote and the passage it came from.
 
-## Get your Gemini key and stay on the free tier
+**Demo limits** (they keep the shared free quota available for everyone): 3 PDFs and 25 questions per visit, up to 150 passages per PDF (about 40–60 pages of notes). Need more? Open **Use your own API key instead** in the sidebar.
 
-1. Open [Google AI Studio API keys](https://aistudio.google.com/apikey) and sign in with your Google account.
-2. Complete the initial setup, then create an API key in a project. If prompted, create a new project.
-3. Confirm that project's plan is **Free tier**. Leave paid billing disabled if you want no-charge usage.
-4. Copy the key into the app's **Gemini API key** password field. Do not send it in chat or commit it to Git.
-5. Click **Load available models**. The dropdowns contain compatible models returned by Google for your key. Prefer a Flash-Lite answer model and `gemini-embedding-001` when listed; confirm their free-tier quota in AI Studio.
-6. Switch on **Try the sample handbook**, click **Prepare PDF**, and ask “How many days of annual leave are available?”
-
-The app now discovers models through Google's model-list endpoint instead of relying on fixed model names. It lists compatible Flash answer models and supported Gemini embedding models. Model listing does not guarantee inference access, free-tier pricing, or remaining quota. If a model still returns 404, reload the list and select another model. The error includes whether PDF preparation or answering failed and the selected model names. Changing the embedding model or API key clears the index so vectors from different models cannot be mixed.
-
-The app cannot determine your billing tier or prevent Google from charging a billing-enabled project. There is no automatic paid-model or OpenAI fallback.
-
-Free-tier usage is limited, not unlimited. A 429/quota message means you should check your limits in AI Studio and wait for them to reset; a shorter PDF uses fewer embedding requests. The app makes one embedding request per text passage, then one query-embedding request and one answer request per question. For a first test, use the three-page sample. Failed preparation can use quota for already-completed passages; do not repeatedly retry a large PDF.
-
-This is not an offline app. Preparing a PDF sends its extracted text to Google. Questions and retrieved passages are also sent to Google. Google's free-tier content may be used to improve its products, so use public or sample PDFs. No API calls are made just by opening the app or selecting a PDF. **Load available models** sends only a model-list request, not PDF content.
-
-## Try it
-
-Switch on **Try the sample handbook**, prepare it, and ask:
-
-- How many days of paid annual leave do employees receive? (Page 1: 20 days.)
-- How do I report a lost laptop? (Page 2: contact the IT help desk immediately.)
-- What is the meal reimbursement limit? (Page 3: INR 500 per day during approved business travel.)
-- Who won the football World Cup? (Not found in the document.)
-
-The sample is fictional and contains no personal/company data. `examples/evaluation_questions.json` contains a small manual evaluation checklist, not measured benchmark results.
+> **Privacy:** PDF text and questions are sent to Google's Gemini API. Free-tier content may be used by Google to improve its products, so please don't upload private or confidential documents.
 
 ## How it works
 
-1. **Extraction:** pypdf reads selectable text, recording each physical PDF page number.
-2. **Chunking:** LangChain splits each page into 1,000-character passages with 150-character overlap. Chunks never cross a page boundary.
-3. **Embedding:** The selected embedding model converts each passage into its own 768-dimensional vector. Embedding 001 uses retrieval task types; Embedding 2 uses document/query prefixes. Inputs are sent separately to avoid aggregation.
-4. **Retrieval:** an in-memory FAISS index searches normalized vectors using cosine similarity and selects up to four passages.
-5. **Generation:** The selected Gemini Flash model returns a structured answer and supporting quotations through LangChain.
-6. **Validation:** the app checks that source IDs exist and quotes occur in the retrieved text, then maps them to actual page numbers. Unsupported answers or invalid citations produce “Not found in the document.”
-
-The question and document are treated as data in the model prompt. Previous chat messages are displayed but are not sent to the model; ask each question in full. No agents, tools, accounts, or database are needed.
-
-## Project files
-
-```text
-app.py                         Streamlit interface
-providers.py                   Gemini embeddings, chat client, and API error handling
-rag.py                         PDF parsing, chunking, FAISS search, answer validation
-examples/sample_handbook.pdf    Three-page fictional demonstration document
-examples/evaluation_questions.json
-tests/                         Offline pipeline and UI tests
-requirements.txt               Runtime dependencies
-requirements-dev.txt           Test dependencies
-.streamlit/config.toml          Theme and upload limits
+```mermaid
+flowchart LR
+    A[PDF] --> B[Extract text per page<br/>pypdf]
+    B --> C[Split into passages<br/>1,000 chars, 150 overlap]
+    C --> D[Embed each passage<br/>gemini-embedding-2]
+    D --> E[(FAISS index<br/>in memory)]
+    Q[Question] --> F[Embed question]
+    F --> E
+    E --> G[Top 4 passages]
+    G --> H[Gemini answers with<br/>source IDs + quotes]
+    H --> I{Quotes found<br/>in passages?}
+    I -- yes --> J[Answer + pages + quotes]
+    I -- no --> K[Not found in the document.]
 ```
 
-## Test
+1. **Extract** — pypdf reads the text of each page and remembers the page number.
+2. **Chunk** — each page is split into ~1,000-character passages with 150 characters of overlap. Passages never cross a page boundary, so each citation points to exactly one page.
+3. **Embed** — each passage becomes a 768-number vector using Gemini embeddings.
+4. **Retrieve** — FAISS finds the 4 passages most similar to the question (cosine similarity).
+5. **Answer** — Gemini (`gemini-3.5-flash-lite`) returns structured JSON: an answer plus the passage IDs and exact quotes that support it.
+6. **Verify** — the app checks that each cited passage exists and each quote appears word-for-word in it. If not, the answer is replaced with "Not found in the document."
+
+The PDF text and the question are treated as untrusted data in the prompt, so instructions hidden inside a PDF are ignored. Each question is answered on its own; earlier chat messages are not sent to the model.
+
+## Measured results
+
+Evaluated with [`evaluate.py`](evaluate.py) on a 13-page handbook (26 passages) with 27 labelled questions, using `gemini-embedding-2` and `gemini-3.5-flash-lite`, retrieving 4 passages per question:
+
+| Metric | Score |
+|---|---|
+| Answer accuracy | **96.3%** (26/27) |
+| Hallucination rate on unanswerable questions | **0%** (0/5) |
+| Citation page accuracy | **100%** |
+| Retrieval hit rate @4 | 95.5% |
+| Retrieval MRR | 0.932 |
+
+The only miss was an exact code lookup ("What is SEC-09?"): vector search didn't retrieve the right page, and the app correctly answered "Not found" instead of guessing. Hybrid keyword + vector search is the planned fix (see [Roadmap](#roadmap)). The full per-question results are in [`results/`](results/).
+
+These numbers come from a small, self-written question set, so treat them as a sanity check, not a benchmark.
+
+## Run it on your computer
+
+**Requirements:** Python 3.11 or newer, and a free Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+```bash
+git clone https://github.com/itsutsaw/pdf-qa-assistant.git
+cd pdf-qa-assistant
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Open http://localhost:8501. There are two ways to give the app a key:
+
+| Option | How | What you see |
+|---|---|---|
+| **Enter it in the app** | Paste your key in the sidebar, click **Load available models**, choose the models | You pick the answer and embedding models from the ones your key can use |
+| **Built-in key** (like the live demo) | Create `.streamlit/secrets.toml` with the line below, or set the `GEMINI_API_KEY` environment variable | No key box; fixed models and the demo limits apply |
+
+```toml
+# .streamlit/secrets.toml — this file is in .gitignore; never commit a real key
+GEMINI_API_KEY = "your-key"
+```
+
+### Getting a free Gemini API key
+
+1. Go to [Google AI Studio → API keys](https://aistudio.google.com/apikey) and sign in with a Google account.
+2. Create an API key (create a project if asked).
+3. Make sure the project is on the **Free tier** and leave billing disabled if you don't want to be charged.
+4. Keep the key private: don't paste it in chats, screenshots, or code.
+
+## Deploy your own copy
+
+1. Fork this repository.
+2. Go to [share.streamlit.io](https://share.streamlit.io), click **Create app**, choose your fork, branch `main`, and file `app.py`.
+3. Open the app's **⋮ → Settings → Secrets** and add:
+   ```toml
+   GEMINI_API_KEY = "your-key"
+   ```
+4. Save. Visitors can now use the app without a key.
+
+To change the fair-use limits, edit [`usage.py`](usage.py):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `SESSION_LIMITS` | 3 PDFs, 25 questions | Per visitor (browser session) |
+| `DAILY_LIMITS` | 40 PDFs, 300 questions | Shared by all visitors per day |
+| `DEMO_MAX_CHUNKS` | 150 | Largest PDF (in passages) allowed on the built-in key |
+
+The daily count is kept in the server's memory, so it resets when the app restarts. Visitors who add their own key are not limited by these settings.
+
+## Gemini API limits (free tier)
+
+The free tier is **not unlimited**. Google limits each project in three ways, separately for each model:
+
+| Limit | Meaning | When it resets |
+|---|---|---|
+| RPM | Requests per minute | Within a minute |
+| TPM | Input tokens per minute | Within a minute |
+| RPD | Requests per day | Midnight Pacific time (about 1:30 PM IST) |
+
+Limits apply **per project, not per API key**, and differ by model and account. See your exact numbers in [AI Studio → Rate limits](https://aistudio.google.com/rate-limit) and Google's [rate limit docs](https://ai.google.dev/gemini-api/docs/rate-limits).
+
+**What Pagewise uses:**
+
+| Action | Embedding requests | Answer requests |
+|---|---|---|
+| Prepare a PDF | 1 per passage (sample: 3, a 49-page set of notes: ~121) | 0 |
+| Ask a question | 1 | 1 |
+
+**How the app handles errors:**
+
+| Error | What the app does |
+|---|---|
+| Per-minute limit (429) | Waits as long as Google asks, then continues where it stopped (up to 2 waits) |
+| Daily limit (429) | Stops and shows a quota message; waiting won't help until the reset |
+| Temporary server error (500/502/503/504) | Retries once after 2 seconds |
+| Anything else | Shows an error message without exposing the key or raw API response |
+
+## Run the tests
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-Tests use real PDF parsing and FAISS search, plus deterministic embedding/model test doubles and real Gemini adapters with mocked SDK responses. They do **not** establish live model accuracy, latency, or cost. They cover invalid/encrypted/blank PDFs, page preservation, retrieval, invalid citations, unsupported answers, and the Streamlit question/clear/document-removal flow. No API key or paid calls are needed for tests.
+The 52 tests run fully offline: they use real PDF parsing and FAISS search with fake embeddings and fake model responses, so **no API key is needed and no quota is used**. They cover PDF validation (empty, corrupt, encrypted, too large), page-number preservation, retrieval, citation checks, the Streamlit UI flow, demo limits, retries and rate-limit handling, and the evaluation metrics.
 
-For manual evaluation, run the included questions with a real API key, record whether the answer and source page are correct, and add questions from another PDF. Only report measured results on your resume.
+## Run the evaluation
 
-## Scope and limitations
+`evaluate.py` runs labelled questions through the real pipeline and reports retrieval and answer quality. It needs a real API key.
 
-- One PDF per session, maximum 10 MB, 100 pages, 150,000 extracted characters, and 220 chunks.
-- Scanned/image-only pages require OCR elsewhere. Empty pages are skipped with a notice. PDF page order can differ from printed page labels.
-- Tables, formulas, and multi-column layouts may extract poorly.
-- Top-four retrieval can miss relevant context; “Not found” can mean retrieval or citation validation failed, not that the fact is definitely absent from the entire PDF.
-- Quote validation checks provenance; it cannot prove that every generated claim logically follows from its quote. Inspect the displayed sources.
-- Indexes, chat history, and entered keys remain in session memory; the app does not write uploaded PDFs or indexes to disk or share them through a global cache. Switching/removing the document clears the old index and chat.
-- This is a local portfolio app, not a production service with authentication, persistent storage, or a hardened untrusted-file processing sandbox.
+```bash
+export GEMINI_API_KEY=your-key
+python evaluate.py --retrieval-only    # retrieval metrics only (no answer calls)
+python evaluate.py                     # full run: retrieval + answers (~27 answer calls)
+```
 
-## Resume description
+| Option | Default | Purpose |
+|---|---|---|
+| `--pdf` | `examples/eval_handbook.pdf` | PDF to evaluate |
+| `--questions` | `examples/eval_handbook_questions.json` | Labelled questions |
+| `--k` | 4 | Passages retrieved for retrieval metrics |
+| `--delay` | 4 | Seconds between answer calls (to stay under RPM) |
+| `--retrieval-only` | off | Skip answer calls |
 
-After running and reviewing the app yourself:
+- Embeddings are cached in `.eval_cache/`, so repeat runs only spend answer calls.
+- Press Ctrl+C to stop early; completed questions are still saved.
+- Results are written to `results/eval-<time>.json`.
+- **Metrics:** hit@1 and hit@k (was the right page retrieved), MRR (how high it ranked), answer accuracy (required facts present), citation page accuracy, false-refusal rate and hallucination rate. Results are also broken down by question type: factual, paraphrase, exact term, multi-page and unanswerable.
 
-**PDF Question-Answering Assistant | Python, Streamlit, LangChain, FAISS**
+To change the evaluation PDF, edit [`scripts/make_eval_pdf.py`](scripts/make_eval_pdf.py) and run `python scripts/make_eval_pdf.py` (needs `requirements-dev.txt`). A test checks that every labelled quote still appears on its expected page.
 
-- Built a RAG application that answers questions from uploaded PDFs using semantic retrieval and an LLM.
-- Implemented page-preserving text chunking, source quotations, page references, and fallback handling for unsupported answers.
+## Project structure
+
+```text
+app.py                     Streamlit interface, built-in key and demo limits
+rag.py                     PDF reading, chunking, FAISS search, answer verification
+providers.py               Gemini clients, retries and rate-limit handling, error messages
+usage.py                   Per-visitor and daily usage limits for the built-in key
+evaluate.py                Evaluation script (retrieval + answer metrics)
+scripts/make_eval_pdf.py   Generates the evaluation handbook PDF
+examples/                  Sample PDF, evaluation PDF and labelled questions
+results/                   Saved evaluation results
+tests/                     Offline tests (no API key needed)
+requirements.txt           App dependencies
+requirements-dev.txt       Test and evaluation-tooling dependencies
+.streamlit/config.toml     Theme and upload size limit
+```
+
+## Limitations
+
+- **PDF size:** one PDF at a time, up to 10 MB, 100 pages, 150,000 characters and 220 passages (150 passages on the built-in demo key).
+- **Text only:** scanned or image-only pages need OCR first and are skipped. Tables, formulas and multi-column layouts may extract poorly.
+- **Narrow answers:** each answer is based on the 4 most relevant passages, so broad questions ("summarise the whole PDF") work poorly. Ask specific questions.
+- **"Not found" isn't proof of absence:** it can also mean retrieval missed the right passage, especially for exact codes and numbers.
+- **Quotes prove the source, not the reasoning:** the app checks that each quote really exists in the PDF, not that every sentence of the answer logically follows from it. Check the sources.
+- **No memory between questions:** follow-ups like "what about the second one?" need the full question.
+- **Session-only storage:** PDFs, indexes and chats stay in memory for your session and are never written to disk. This is a portfolio project, not a hardened production service.
+
+## Roadmap
+
+- [x] Evaluation script with retrieval and answer metrics
+- [x] Built-in demo key with fair-use limits, retries and rate-limit handling
+- [ ] Hybrid retrieval (BM25 keyword + vector search with reciprocal rank fusion)
+- [ ] Follow-up questions using recent chat history
+- [ ] Batched and cached embeddings; keep valid citations when one is invalid
+- [ ] Multiple PDFs with filename + page citations
+- [ ] GitHub Actions to run the tests on every push
 
 ## References
 
-- [Streamlit chat elements](https://docs.streamlit.io/develop/api-reference/chat)
-- [Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key)
-- [Gemini pricing and free tier](https://ai.google.dev/gemini-api/docs/pricing)
-- [Gemini embeddings](https://ai.google.dev/gemini-api/docs/embeddings)
-- [LangChain documentation](https://docs.langchain.com/oss/python/langchain/overview)
-# pdf-qa-assistant
+- [Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key) · [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits) · [Pricing and free tier](https://ai.google.dev/gemini-api/docs/pricing) · [Embeddings](https://ai.google.dev/gemini-api/docs/embeddings)
+- [Streamlit chat elements](https://docs.streamlit.io/develop/api-reference/chat) · [Streamlit secrets](https://docs.streamlit.io/develop/concepts/connections/secrets-management)
+- [LangChain documentation](https://docs.langchain.com/oss/python/langchain/overview) · [FAISS](https://github.com/facebookresearch/faiss)
